@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2020 Joël Porquet-Lupine. All rights reserved.
+#
+# This work is licensed under the GPLv2+. Please see LICENSE for more
+# information.
+
+# Drop script at root of dotfile directory.
+# dotlink [options] install [targets]...
+# dotlink [options] uninstall [targets]...
+# dotlink [options] status [targets]...
+
+# Safer execution
+# -e: exit immediately if a command fails
+# -E: Safer -e option for traps
+# -u: fail if a variable is used unset
+# -o pipefail: exit immediately if command in a pipe fails
+set -eEuo pipefail
+# -x: print each command before executing (great for debugging)
+#set -x
+
+# Convenient values
+readonly SCRIPTPATH=$(readlink -f "${0}")
+readonly SCRIPTNAME=$(basename "$SCRIPTPATH")
+readonly SCRIPTDIR=$(dirname "$SCRIPTPATH")
+
+# Global variable
+PRETEND=0
+VERBOSE=0
+
+# Constants
+readonly SPACE='[[:space:]]*'
+
+usage() {
+    log "Usage: ${SCRIPTNAME} [options] command [targets]..."
+}
+
+#
+# Logging helpers
+#
+log() {
+    printf %s\\n "${*}"
+}
+info() {
+    # [ ${VERBOSE} -eq 0 ] && return
+    log "Info: ${*}"
+}
+warning() {
+    log "Warning: ${*}" >&2
+}
+error() {
+    log "Error: ${*}" >&2
+}
+die() {
+    error "${*}"
+    exit 1
+}
+
+install_one() {
+    local -r src="$1" dest="$2" dir="$3"
+
+    # Real paths
+    local -r src_rp="${SCRIPTDIR}/${src}"   # From where we are
+    local -r dst_rp="${dest/#\~/$HOME}"     # Expand tilde
+
+    if [[ -e "${dst_rp}" ]]; then
+        warning "skipping target '${src}':" \
+            "destination '${dest}' already installed"
+        return
+    fi
+
+    if [[ ${PRETEND} -eq 1 ]]; then
+        log "[Dryrun]: install ${src} to ${dest} as ${dir}"
+        return
+    fi
+
+    case "${dir}" in
+        slink)  ln -s "${src_rp}" "${dst_rp}" ;;
+        copy)   cp "${src_rp}" "${dst_rp}" ;;
+        hlink)  ln "${src_rp}" "${dst_rp}" ;;
+    esac
+}
+
+uninstall_one() {
+    local -r src="$1" dest="$2" dir="$3"
+
+    # Real paths
+    local -r src_rp="${SCRIPTDIR}/${src}"   # From where we are
+    local -r dst_rp="${dest/#\~/$HOME}"     # Expand tilde
+
+    if [[ ! -e "${dst_rp}" ]]; then
+        warning "skipping target '${src}':" \
+            "destination '${dest}' not installed"
+        return
+    fi
+
+    if [[ ${PRETEND} -eq 1 ]]; then
+        log "[Dryrun]: remove ${dest}"
+        return
+    fi
+
+    local rm_opt="-f"
+    [[ -d "${dst_rp}" ]] && rm_opt+="r"
+
+    rm "${rm_opt}" "${dst_rp}"
+}
+
+status_one() {
+    local -r src="$1" dest="$2" dir="$3"
+
+    # Real paths
+    local -r src_rp="${SCRIPTDIR}/${src}"   # From where we are
+    local -r dst_rp="${dest/#\~/$HOME}"     # Expand tilde
+
+    if [[ ! -e "${dst_rp}" ]]; then
+        log "target '${src}':" \
+            "destination '${dst_rp}' not installed"
+        return
+    fi
+
+    if [[ "${dir}" == "slink" && ( -h "${dst_rp}" && "${dst_rp}" -ef "${src_rp}" ) ]]; then
+        log "${src} installed to ${dst_rp} as ${dir}"
+    elif  [[ "${dir}" == "copy" && ( -f "${dst_rp}" || -d "${dst_rp}" ) ]]; then
+        log "${src} installed to ${dest} as ${dir}"
+    elif  [[ "${dir}" == "hlink" && ( -f "${dst_rp}" || -d "${dst_rp}" ) && \
+        "${dst_rp}" -ef "${src_rp}" ]]; then
+        log "${src} installed to ${dest} as ${dir}"
+    else
+        log "${dest} installed but not from proper target or directive"
+    fi
+}
+
+exec_cmd_one() {
+    case "${CMD}" in
+        install)
+            install_one "${@}"
+            ;;
+        uninstall)
+            uninstall_one "${@}"
+            ;;
+        status)
+            status_one "${@}"
+            ;;
+    esac
+}
+
+run_cmd_one() {
+    local -r target="$1"
+
+    # Get base directory
+    local -r dirname=$(dirname "${target}")
+    local -r filename=$(basename "${target}")
+
+    # Get config file
+    local -r configf="${dirname}/dotlink.conf"
+
+    # Find the right directive for this target
+    local directive=
+    for directive in slink copy hlink; do
+        local pattern="/^${SPACE}\[${directive}\]/,/\[/s/^${SPACE}${filename}${SPACE}=${SPACE}//p"
+        local dest=$(sed -n "${pattern}" "${configf}")
+
+        if [[ -n "${dest}" ]]; then
+            # Perform expected operation and return
+            exec_cmd_one "${target}" "${dest}" "${directive}"
+            return
+        fi
+    done
+
+    # Didn't find a directive for this target
+
+    # If it's a directory, recurse into directory
+    if [ -d "${target}" ]; then
+        local recur
+        mapfile -t recur < \
+            <(find "${target}" -mindepth 1 -maxdepth 1 \
+                -type f -a ! -name "dotlink.conf" -o -type d)
+        run_cmd_all "${recur[@]}"
+    else
+        # Otherwise, report non-fatal error and skip
+        warning "no directive found for target '${target}'"
+    fi
+}
+
+run_cmd_all() {
+    local target=
+    # Foreach target (file/directory) to examine
+    for target; do
+
+        # Test if target exists
+        if [ ! -e "${target}" ]; then
+            # Report non-fatal error and skip
+            warning "'${target}' doesn't not exist"
+            continue
+        fi
+
+        run_cmd_one "${target}"
+    done
+}
+
+parse_args() {
+    local arg=
+    for arg; do
+        case "${arg}" in
+            -h|-\?|--help)
+                usage
+                exit 0
+                ;;
+            -v|--verbose)
+                readonly VERBOSE=1
+                ;;
+            -n|--dryrun)
+                readonly PRETEND=1
+                ;;
+            -*)
+                die "Unknown option '${arg}'"
+                ;;
+            *)
+                # Command should be the first positional argument
+                if [ -z "${CMD:-}" ]; then
+                    readonly CMD="${arg}"
+
+                    case "${CMD}" in
+                        install|uninstall|status) ;;
+                        *) die "Unknown command '${CMD}'" ;;
+                    esac
+                else
+                    # Add the rest to $@
+                    set -- "${@}" "${arg}"
+                fi
+                ;;
+        esac
+        shift
+    done
+
+    # All the options should have been examined now,
+    # so let's get all the targets (ie the remaining arguments)
+    readonly TARGETS=("${@}")
+}
+
+main() {
+    parse_args "${@}"
+    run_cmd_all "${TARGETS[@]}"
+}
+main "${@}"
+
+# vim:set ft=sh:
