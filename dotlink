@@ -32,11 +32,6 @@ VERBOSE=0
 ## Constants
 readonly SPACE='[[:space:]]*'
 
-usage() {
-    log "Usage: ${SCRIPTNAME} [options] command [targets]..."
-}
-
-#
 # Logging helpers
 log() {
     printf %s\\n "${*}"
@@ -51,10 +46,6 @@ warning() {
 }
 error() {
     log "Error: ${*}" >&2
-}
-die() {
-    error "${*}"
-    exit 1
 }
 
 # Individual commands
@@ -201,13 +192,27 @@ run_cmd_all() {
     done
 }
 
+# Command line interface
+readonly USAGE="Usage: ${SCRIPTNAME} [options] command [targets]..."
+usage() {
+    local -r type="$1" ret="$2"
+
+    log "$USAGE"
+    if [[ ${type} == "short" ]]; then
+        log "Try '${SCRIPTNAME} -h' for more information."
+    else
+        log "Long help..."
+    fi
+
+    exit "${ret}"
+}
+
 parse_args() {
     local arg=
     for arg; do
         case "${arg}" in
             -h|-\?|--help)
-                usage
-                exit 0
+                usage "long" 0
                 ;;
             -v|--verbose)
                 readonly VERBOSE=1
@@ -217,7 +222,8 @@ parse_args() {
                 readonly VERBOSE=1
                 ;;
             -*)
-                die "Unknown option '${arg}'"
+                error "Unknown option '${arg}'"
+                usage "short" 1
                 ;;
             *)
                 # Command should be the first positional argument
@@ -226,7 +232,7 @@ parse_args() {
 
                     case "${CMD}" in
                         install|uninstall|status) ;;
-                        *) die "Unknown command '${CMD}'" ;;
+                        *) error "Unknown command '${CMD}'"; usage "short" 1 ;;
                     esac
                 else
                     # Add the rest to $@
@@ -236,6 +242,11 @@ parse_args() {
         esac
         shift
     done
+
+    # Check that we have at least one target
+    if [[ $# -eq 0 ]]; then
+        usage "short" 1
+    fi
 
     # All the options should have been examined now,
     # so let's get all the targets (ie the remaining arguments)
