@@ -42,8 +42,9 @@ log() {
     printf %s\\n "${*}"
 }
 info() {
-    # [ ${VERBOSE} -eq 0 ] && return
-    log "Info: ${*}"
+    if [[ ${VERBOSE} -eq 1 ]]; then
+        log "Info: ${*}"
+    fi
 }
 warning() {
     log "Warning: ${*}" >&2
