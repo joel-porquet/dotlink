@@ -10,25 +10,26 @@
 # dotlink [options] uninstall [targets]...
 # dotlink [options] status [targets]...
 
-# Safer execution
-# -e: exit immediately if a command fails
-# -E: Safer -e option for traps
-# -u: fail if a variable is used unset
-# -o pipefail: exit immediately if command in a pipe fails
+# Script execution
+#   -e: exit immediately if a command fails
+#   -E: Safer -e option for traps
+#   -u: fail if a variable is used unset
+#   -o pipefail: exit immediately if command in a pipe fails
 set -eEuo pipefail
-# -x: print each command before executing (great for debugging)
+#   -x: print each command before executing (great for debugging)
 #set -x
 
-# Convenient values
+# Global variables
+## Convenient values
 readonly SCRIPTPATH=$(readlink -f "${0}")
 readonly SCRIPTNAME=$(basename "$SCRIPTPATH")
 readonly SCRIPTDIR=$(dirname "$SCRIPTPATH")
 
-# Global variable
+## Global variable
 PRETEND=0
 VERBOSE=0
 
-# Constants
+## Constants
 readonly SPACE='[[:space:]]*'
 
 usage() {
@@ -37,7 +38,6 @@ usage() {
 
 #
 # Logging helpers
-#
 log() {
     printf %s\\n "${*}"
 }
@@ -57,6 +57,8 @@ die() {
     exit 1
 }
 
+# Individual commands
+## Install file
 install_one() {
     local -r src="$1" dest="$2" dir="$3"
 
@@ -80,6 +82,7 @@ install_one() {
     esac
 }
 
+## Uninstall file
 uninstall_one() {
     local -r src="$1" dest="$2" dir="$3"
 
@@ -102,6 +105,7 @@ uninstall_one() {
     rm "${rm_opt}" "${dst_rp}"
 }
 
+## Get status
 status_one() {
     local -r src="$1" dest="$2" dir="$3"
 
@@ -127,6 +131,7 @@ status_one() {
     fi
 }
 
+# Running command on files
 exec_cmd_one() {
     case "${CMD}" in
         install)
@@ -237,6 +242,7 @@ parse_args() {
     readonly TARGETS=("${@}")
 }
 
+# Main function
 main() {
     parse_args "${@}"
     run_cmd_all "${TARGETS[@]}"
