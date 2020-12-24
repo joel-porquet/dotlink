@@ -70,10 +70,8 @@ install_one() {
         return
     fi
 
-    if [[ ${PRETEND} -eq 1 ]]; then
-        log "[Dryrun]: install ${src} to ${dest} as ${dir}"
-        return
-    fi
+    info "install ${src} to ${dest} as ${dir}"
+    [[ ${PRETEND} -eq 1 ]] && return
 
     case "${dir}" in
         slink)  ln -s "${src_rp}" "${dst_rp}" ;;
@@ -95,10 +93,8 @@ uninstall_one() {
         return
     fi
 
-    if [[ ${PRETEND} -eq 1 ]]; then
-        log "[Dryrun]: remove ${dest}"
-        return
-    fi
+    info "remove ${dest}"
+    [[ ${PRETEND} -eq 1 ]] && return
 
     local rm_opt="-f"
     [[ -d "${dst_rp}" ]] && rm_opt+="r"
@@ -213,6 +209,7 @@ parse_args() {
                 ;;
             -n|--dryrun)
                 readonly PRETEND=1
+                readonly VERBOSE=1
                 ;;
             -*)
                 die "Unknown option '${arg}'"
