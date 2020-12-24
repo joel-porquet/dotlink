@@ -158,7 +158,8 @@ run_cmd_one() {
     local directive=
     for directive in slink copy hlink; do
         local pattern="/^${SPACE}\[${directive}\]/,/\[/s/^${SPACE}${filename}${SPACE}=${SPACE}//p"
-        local dest=$(sed -n "${pattern}" "${configf}")
+        local dest
+        dest=$(sed -n "${pattern}" "${configf}")
 
         if [[ -n "${dest}" ]]; then
             # Perform expected operation and return
