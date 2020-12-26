@@ -193,7 +193,7 @@ run_cmd_all() {
 }
 
 # Command line interface
-readonly USAGE="Usage: ${SCRIPTNAME} [options] command [targets]..."
+readonly USAGE="Usage: ${SCRIPTNAME} [options] <command> <targets>..."
 usage() {
     local -r type="$1" ret="$2"
 
@@ -201,7 +201,17 @@ usage() {
     if [[ ${type} == "short" ]]; then
         log "Try '${SCRIPTNAME} -h' for more information."
     else
-        log "Long help..."
+        log ""
+        log "Options:"
+        log "   -h/-?/--help    Display this help message"
+        log "   -v/--verbose    Verbose mode"
+        log "   -n/--dryrun     Dryrun mode"
+        log ""
+        log "Command:"
+        log "   install         Install <targets>"
+        log "   uninstall       Uninstall <targets>"
+        log "   status          Get status about <targets>"
+        log ""
     fi
 
     exit "${ret}"
