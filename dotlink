@@ -62,7 +62,7 @@ install_one() {
         return
     fi
 
-    info "install ${src} to ${dest} as ${dir}"
+    info "[${dir}]: ${src} => ${dest}"
     [[ ${PRETEND} -eq 1 ]] && return
 
     case "${dir}" in
@@ -86,7 +86,7 @@ uninstall_one() {
         return
     fi
 
-    info "remove ${dest}"
+    info "- ${dest}"
     [[ ${PRETEND} -eq 1 ]] && return
 
     local rm_opt="-f"
