@@ -1,3 +1,5 @@
+# dotlink
+
 ## Introduction
 
 `dotlink` is a simple dotfile manager.
@@ -59,18 +61,26 @@ $ dotlink status etc/git
 
 ## Install
 
-### Archlinux
+### Local
 
-```
-$ pacman -S dotlink
-```
+`dotlink` is a simple bash script. If you want, you can simply download it and 
+drop it into your dotfiles folder. This way it'll always be there wherever your 
+dotfiles are.
 
-### Git
+### System-wide
+
+#### Git
 
 ```
 $ git clone
 $ cd dotlink
 $ sudo make install
+```
+
+#### Archlinux
+
+```
+$ pacman -S dotlink
 ```
 
 ## Usage
