@@ -104,25 +104,31 @@ status_one() {
     local -r dst_rp="${dest/#\~/$HOME}"     # Expand tilde
 
     if [[ ! -e "${dst_rp}" ]]; then
-        log "target '${src}':" \
-            "destination '${dst_rp}' not installed"
+        log "[${dir}]: '${src}' is not installed"
         return
     fi
 
     if [[ "${dir}" == "slink" && ( -h "${dst_rp}" && "${dst_rp}" -ef "${src_rp}" ) ]]; then
-        log "${src} installed to ${dst_rp} as ${dir}"
+        log "[${dir}]: '${src}' => '${dest}'"
     elif  [[ "${dir}" == "copy" && ( -f "${dst_rp}" || -d "${dst_rp}" ) ]]; then
-        log "${src} installed to ${dest} as ${dir}"
+        log "[${dir}]: '${src}' => '${dest}'"
     elif  [[ "${dir}" == "hlink" && ( -f "${dst_rp}" || -d "${dst_rp}" ) && \
         "${dst_rp}" -ef "${src_rp}" ]]; then
-        log "${src} installed to ${dest} as ${dir}"
+        log "[${dir}]: '${src}' => '${dest}'"
     else
-        log "${dest} installed but not from proper target or directive"
+        log "Conflict: '${src}' != '${dest}'"
     fi
 }
 
 # Running command on files
 exec_cmd_one() {
+    local -r src="$1" dest="$2" dir="$3"
+
+    if [[ "${dir}" == "ignore" ]]; then
+        info "ignore '${1}'"
+        return
+    fi
+
     case "${CMD}" in
         install)
             install_one "${@}"
@@ -148,7 +154,7 @@ run_cmd_one() {
 
     # Find the right directive for this target
     local directive=
-    for directive in slink copy hlink; do
+    for directive in ignore slink copy hlink; do
         local pattern="/^${SPACE}\[${directive}\]/,/\[/s/^${SPACE}${filename}${SPACE}=${SPACE}//p"
         local dest
         dest=$(sed -n "${pattern}" "${configf}")
