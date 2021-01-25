@@ -23,7 +23,6 @@ set -eEuo pipefail
 ## Convenient values
 readonly SCRIPTPATH=$(readlink -f "${0}")
 readonly SCRIPTNAME=$(basename "$SCRIPTPATH")
-readonly SCRIPTDIR=$(dirname "$SCRIPTPATH")
 
 ## Global variable
 PRETEND=0
@@ -54,7 +53,7 @@ install_one() {
     local -r src="$1" dest="$2" dir="$3"
 
     # Real paths
-    local -r src_rp="${SCRIPTDIR}/${src}"   # From where we are
+    local -r src_rp="${PWD}/${src}"         # From where we are
     local -r dst_rp="${dest/#\~/$HOME}"     # Expand tilde
 
     if [[ -e "${dst_rp}" ]]; then
@@ -78,7 +77,7 @@ uninstall_one() {
     local -r src="$1" dest="$2" dir="$3"
 
     # Real paths
-    local -r src_rp="${SCRIPTDIR}/${src}"   # From where we are
+    local -r src_rp="${PWD}/${src}"         # From where we are
     local -r dst_rp="${dest/#\~/$HOME}"     # Expand tilde
 
     if [[ ! -e "${dst_rp}" ]]; then
@@ -101,7 +100,7 @@ status_one() {
     local -r src="$1" dest="$2" dir="$3"
 
     # Real paths
-    local -r src_rp="${SCRIPTDIR}/${src}"   # From where we are
+    local -r src_rp="${PWD}/${src}"         # From where we are
     local -r dst_rp="${dest/#\~/$HOME}"     # Expand tilde
 
     if [[ ! -e "${dst_rp}" ]]; then
