@@ -164,15 +164,21 @@ run_cmd_one() {
 
     # If it's a directory, recurse into directory
     if [ -d "${target}" ]; then
-        local recur
-        mapfile -t recur < \
-            <(find "${target}" -mindepth 1 -maxdepth 1 \
-                -type f -a ! -name "dotlink.conf" -o -type d)
-        run_cmd_all "${recur[@]}"
+        _recurse_dir "${target}"
     else
         # Otherwise, report non-fatal error and skip
         warning "no directive found for target '${target}'"
     fi
+}
+
+_recurse_dir() {
+    local -r target="$1"
+
+    local recur
+    mapfile -t recur < \
+        <(find "${target}" -mindepth 1 -maxdepth 1 \
+            -type f -a ! -name "dotlink.conf" -o -type d)
+    run_cmd_all "${recur[@]}"
 }
 
 run_cmd_all() {
@@ -187,7 +193,21 @@ run_cmd_all() {
             continue
         fi
 
-        run_cmd_one "${target}"
+        # Get config file
+        local dirname=$(dirname "${target}")
+        local configf="${dirname}/dotlink.conf"
+
+        if [ ! -e "${configf}" ]; then
+            # Inexisting config file
+            if [ -f "${target}" ]; then
+                warning "no dotlink.conf file for '${target}'"
+            elif [ -d "${target}" ]; then
+                _recurse_dir "${target}"
+            fi
+        else
+            # Config file in same directory as target, try it
+            run_cmd_one "${target}"
+        fi
     done
 }
 
