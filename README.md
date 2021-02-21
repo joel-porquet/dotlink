@@ -79,8 +79,12 @@ $ sudo make install
 
 #### Archlinux
 
+A package is available in AUR:
+<https://aur.archlinux.org/packages/dotlink-git/>. Use your favorite AUR
+installer, such as [yay](https://github.com/Jguer/yay):
+
 ```
-$ pacman -S dotlink
+$ yay -S dotlink-git
 ```
 
 ## Usage
